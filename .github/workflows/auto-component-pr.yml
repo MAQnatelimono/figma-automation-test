@@ -1,0 +1,57 @@
+name: Auto PR for Copilot-Generated Components
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "src/components/generated/**"
+
+jobs:
+  auto-pr:
+    runs-on: ubuntu-latest
+
+    permissions: # 🔒 least privilege
+      contents: write        # needed to push commits/branches
+      pull-requests: write   # needed to open PRs
+      issues: write          # needed to add labels
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint & tests
+        run: |
+          npm run lint
+          npm test
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@6b4f728d47d72a1a8a785ce53c58a19ff1a58312
+        with:
+          commit-message: "chore: auto PR for Copilot-generated components"
+          branch: "copilot-gen-${{ github.run_id }}"
+          title: "Copilot-Generated Components"
+          body: |
+            This PR includes Copilot-generated components committed by developers.
+            - Triggered by push to ${{ github.ref_name }}
+            - Changes are located in `src/components/generated/`
+            Please review before merging.
+
+      - name: Add label to PR
+        if: steps.cpr.outputs.pull-request-number != ''
+        uses: actions-ecosystem/action-add-labels@15c71cfb9e8a36c3f5fef55f6cf9e62c3d2b6d7c
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.cpr.outputs.pull-request-number }}
+          labels: |
+            generated-by-copilot
