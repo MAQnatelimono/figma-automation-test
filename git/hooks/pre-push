@@ -1,0 +1,19 @@
+#!/bin/sh
+# Pre-push hook to auto-branch Copilot-generated components
+
+# Check if changes exist in generated components folder
+if git diff --cached --quiet -- src/components/generated/; then
+  echo "No Copilot-generated components detected. Normal push."
+  exit 0
+fi
+
+# Create a unique branch name
+BRANCH="copilot-gen-$(date +%Y%m%d-%H%M%S)"
+
+echo "Detected Copilot-generated components. Creating branch: $BRANCH"
+
+# Cancel the normal push
+git push --no-verify origin HEAD:$BRANCH
+
+# Exit with non-zero to stop default push
+exit 1
